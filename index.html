@@ -102,7 +102,7 @@
 
   <script>
     const SHEET_ID = '1TSul59NIR8cuLnDdeX4mtYvArgOtRS97KLRxQBRb3Os';
-    const SHEET_NAME = 'Sheet1';
+    const SHEET_NAME = 'Sheet';
     const SHEET_URL = `https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`;
 
     function createChart(canvasId, label, color) {
@@ -146,9 +146,12 @@
         const response = await fetch(SHEET_URL);
         const data = await response.json();
 
-        if (!data || data.length === 0) return;
+        if (!Array.isArray(data) || data.length === 0) return;
 
-        const latest = data[data.length - 1];
+        const validRows = data.filter(row => row && row.temp !== undefined && row.temp !== '');
+        if (validRows.length === 0) return;
+
+        const latest = validRows[validRows.length - 1];
 
         document.getElementById('temp').textContent = `${latest.temp || 0} °C`;
         document.getElementById('hum').textContent = `${latest.humidity || 0} %`;
@@ -159,7 +162,7 @@
         setStatus('cooling', latest.cooling || 'OFF');
         setStatus('water', latest.water || 'OFF');
 
-        const recent = data.slice(-20);
+        const recent = validRows.slice(-20);
 
         tempChart.data.labels = recent.map(row => row.Time || '');
         tempChart.data.datasets[0].data = recent.map(row => parseFloat(row.temp));
