@@ -93,8 +93,8 @@
       <h3>System Status</h3>
       <p>Fan 1: <span id="fan1">--</span></p>
       <p>Fan 2: <span id="fan2">--</span></p>
-      <p>Fan 3: <span id="fan3">--</span></p>
-      <p>Fan 4: <span id="fan4">--</span></p>
+      
+      
       <p>Cooling: <span id="cooling">--</span></p>
       <p>Water Pump: <span id="water">--</span></p>
     </div>
@@ -136,8 +136,9 @@
 
     function setStatus(id, value) {
       const element = document.getElementById(id);
-      element.textContent = value;
-      element.className = value.toUpperCase() === 'ON' ? 'on' : 'off';
+      const state = (value == 1 || value === '1' || String(value).toUpperCase() === 'ON') ? 'ON' : 'OFF';
+      element.textContent = state;
+      element.className = state === 'ON' ? 'on' : 'off';
     }
 
     async function updateDashboard() {
@@ -149,14 +150,12 @@
 
         const latest = data[data.length - 1];
 
-        document.getElementById('temp').textContent = `${latest.temp} °C`;
-        document.getElementById('hum').textContent = `${latest.humidity} %`;
-        document.getElementById('co2').textContent = `${latest.CO2} ppm`;
+        document.getElementById('temp').textContent = `${latest.temp || 0} °C`;
+        document.getElementById('hum').textContent = `${latest.humidity || 0} %`;
+        document.getElementById('co2').textContent = `${latest.CO2 || 0} ppm`;
 
         setStatus('fan1', latest.fan1 || 'OFF');
         setStatus('fan2', latest.fan2 || 'OFF');
-        setStatus('fan3', latest.fan3 || 'OFF');
-        setStatus('fan4', latest.fan4 || 'OFF');
         setStatus('cooling', latest.cooling || 'OFF');
         setStatus('water', latest.water || 'OFF');
 
