@@ -8,7 +8,7 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #1a1a2e;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
       color: white;
       margin: 0;
       padding: 0;
@@ -17,9 +17,10 @@
     header {
       text-align: center;
       padding: 20px;
-      background: #162447;
-      font-size: 28px;
+      background: #0f172a;
+      font-size: 2rem;
       font-weight: bold;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
     }
 
     .container {
@@ -31,39 +32,48 @@
     }
 
     .card {
-      background: #1f4068;
-      border-radius: 15px;
+      background: #1e3a8a;
+      border-radius: 16px;
       padding: 20px;
-      width: 300px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      width: 320px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
       text-align: center;
     }
 
     .value {
-      font-size: 32px;
+      font-size: 2.2rem;
       margin: 10px 0;
       font-weight: bold;
     }
 
     canvas {
-      background: #162447;
+      background: rgba(255,255,255,0.05);
       border-radius: 10px;
       margin-top: 10px;
+      padding: 10px;
     }
 
     .status p {
-      font-size: 18px;
-      margin: 8px 0;
+      font-size: 1.1rem;
+      margin: 10px 0;
+      text-align: left;
     }
 
     .on {
-      color: #00ff99;
+      color: #22c55e;
       font-weight: bold;
     }
 
     .off {
-      color: #ff6666;
+      color: #ef4444;
       font-weight: bold;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 15px;
+      color: #cbd5e1;
+      font-size: 0.9rem;
     }
   </style>
 </head>
@@ -93,17 +103,20 @@
       <h3>System Status</h3>
       <p>Fan 1: <span id="fan1">--</span></p>
       <p>Fan 2: <span id="fan2">--</span></p>
-      
-      
-      <p>Cooling: <span id="cooling">--</span></p>
+      <p>Fan 3: <span id="fan3">--</span></p>
+      <p>Fan 4: <span id="fan4">--</span></p>
+      <p>Cooling System: <span id="cooling">--</span></p>
       <p>Water Pump: <span id="water">--</span></p>
     </div>
   </div>
 
+  <div class="footer">
+    Real-Time Monitoring System | Updates every 5 seconds
+  </div>
+
   <script>
     const SHEET_ID = '1TSul59NIR8cuLnDdeX4mtYvArgOtRS97KLRxQBRb3Os';
-    const SHEET_NAME = 'Sheet';
-    const SHEET_URL = `https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`;
+    const SHEET_URL = 'https://docs.google.com/spreadsheets/d/';
 
     function createChart(canvasId, label, color) {
       return new Chart(document.getElementById(canvasId), {
@@ -111,20 +124,29 @@
         data: {
           labels: [],
           datasets: [{
-            label: label,
+            label,
             data: [],
             borderColor: color,
             backgroundColor: color,
+            borderWidth: 3,
             fill: false,
-            tension: 0.3
+            tension: 0.35
           }]
         },
         options: {
           responsive: true,
-          plugins: { legend: { labels: { color: 'white' } } },
+          plugins: {
+            legend: {
+              labels: { color: 'white' }
+            }
+          },
           scales: {
-            x: { ticks: { color: 'white' } },
-            y: { ticks: { color: 'white' } }
+            x: {
+              ticks: { color: 'white' }
+            },
+            y: {
+              ticks: { color: 'white' }
+            }
           }
         }
       });
@@ -136,9 +158,9 @@
 
     function setStatus(id, value) {
       const element = document.getElementById(id);
-      const state = (value == 1 || value === '1' || String(value).toUpperCase() === 'ON') ? 'ON' : 'OFF';
-      element.textContent = state;
-      element.className = state === 'ON' ? 'on' : 'off';
+      const status = String(value || 'OFF').toUpperCase();
+      element.textContent = status;
+      element.className = status === 'ON' ? 'on' : 'off';
     }
 
     async function updateDashboard() {
@@ -146,36 +168,41 @@
         const response = await fetch(SHEET_URL);
         const data = await response.json();
 
-        if (!Array.isArray(data) || data.length === 0) return;
+        if (!data || data.length === 0) {
+          console.warn('No data found in Google Sheet.');
+          return;
+        }
 
-        const validRows = data.filter(row => row && row.temp !== undefined && row.temp !== '');
-        if (validRows.length === 0) return;
+        const latest = data[data.length - 1];
+        console.log('Latest Data:', latest);
 
-        const latest = validRows[validRows.length - 1];
+        document.getElementById('temp').textContent = `${latest.temp || '--'} °C`;
+        document.getElementById('hum').textContent = `${latest.hum || '--'} %`;
+        document.getElementById('co2').textContent = `${latest.co2 || '--'} ppm`;
 
-        document.getElementById('temp').textContent = `${latest.temp || 0} °C`;
-        document.getElementById('hum').textContent = `${latest.humidity || 0} %`;
-        document.getElementById('co2').textContent = `${latest.CO2 || 0} ppm`;
+        setStatus('fan1', latest.fan1);
+        setStatus('fan2', latest.fan2);
+        setStatus('fan3', latest.fan3);
+        setStatus('fan4', latest.fan4);
+        setStatus('cooling', latest.cooling);
+        setStatus('water', latest.water);
 
-        setStatus('fan1', latest.fan1 || 'OFF');
-        setStatus('fan2', latest.fan2 || 'OFF');
-        setStatus('cooling', latest.cooling || 'OFF');
-        setStatus('water', latest.water || 'OFF');
+        const recent = data.slice(-20);
+        const labels = recent.map(row => row.Time || row.time || '');
 
-        const recent = validRows.slice(-20);
+        tempChart.data.labels = labels;
+        tempChart.data.datasets[0].data = recent.map(row => parseFloat(row.temp) || 0);
 
-        tempChart.data.labels = recent.map(row => row.Time || '');
-        tempChart.data.datasets[0].data = recent.map(row => parseFloat(row.temp));
+        humChart.data.labels = labels;
+        humChart.data.datasets[0].data = recent.map(row => parseFloat(row.hum) || 0);
 
-        humChart.data.labels = recent.map(row => row.Time || '');
-        humChart.data.datasets[0].data = recent.map(row => parseFloat(row.humidity));
-
-        co2Chart.data.labels = recent.map(row => row.Time || '');
-        co2Chart.data.datasets[0].data = recent.map(row => parseFloat(row.CO2));
+        co2Chart.data.labels = labels;
+        co2Chart.data.datasets[0].data = recent.map(row => parseFloat(row.co2) || 0);
 
         tempChart.update();
         humChart.update();
         co2Chart.update();
+
       } catch (error) {
         console.error('Error loading Google Sheet data:', error);
       }
