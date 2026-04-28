@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mushroom Room Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #1a1a2e;
+      color: white;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      text-align: center;
+      padding: 20px;
+      background: #162447;
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .card {
+      background: #1f4068;
+      border-radius: 15px;
+      padding: 20px;
+      width: 300px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    .value {
+      font-size: 32px;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+
+    canvas {
+      background: #162447;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    .status p {
+      font-size: 18px;
+      margin: 8px 0;
+    }
+
+    .on {
+      color: #00ff99;
+      font-weight: bold;
+    }
+
+    .off {
+      color: #ff6666;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <header>🍄 Mushroom Room 01 Dashboard</header>
+
+  <div class="container">
+    <div class="card">
+      <h3>Temperature</h3>
+      <div id="temp" class="value">-- °C</div>
+      <canvas id="tempChart"></canvas>
+    </div>
+
+    <div class="card">
+      <h3>Humidity</h3>
+      <div id="hum" class="value">-- %</div>
+      <canvas id="humChart"></canvas>
+    </div>
+
+    <div class="card">
+      <h3>CO₂ Level</h3>
+      <div id="co2" class="value">-- ppm</div>
+      <canvas id="co2Chart"></canvas>
+    </div>
+
+    <div class="card status">
+      <h3>System Status</h3>
+      <p>Fan 1: <span id="fan1">--</span></p>
+      <p>Fan 2: <span id="fan2">--</span></p>
+      <p>Fan 3: <span id="fan3">--</span></p>
+      <p>Fan 4: <span id="fan4">--</span></p>
+      <p>Cooling: <span id="cooling">--</span></p>
+      <p>Water Pump: <span id="water">--</span></p>
+    </div>
+  </div>
+
+  <script>
+    const SHEET_ID = '1TSul59NIR8cuLnDdeX4mtYvArgOtRS97KLRxQBRb3Os';
+    const SHEET_NAME = 'Sheet1';
+    const SHEET_URL = `https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`;
+
+    function createChart(canvasId, label, color) {
+      return new Chart(document.getElementById(canvasId), {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: label,
+            data: [],
+            borderColor: color,
+            backgroundColor: color,
+            fill: false,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { labels: { color: 'white' } } },
+          scales: {
+            x: { ticks: { color: 'white' } },
+            y: { ticks: { color: 'white' } }
+          }
+        }
+      });
+    }
+
+    const tempChart = createChart('tempChart', 'Temperature (°C)', '#ff6384');
+    const humChart = createChart('humChart', 'Humidity (%)', '#36a2eb');
+    const co2Chart = createChart('co2Chart', 'CO₂ (ppm)', '#4bc0c0');
+
+    function setStatus(id, value) {
+      const element = document.getElementById(id);
+      element.textContent = value;
+      element.className = value.toUpperCase() === 'ON' ? 'on' : 'off';
+    }
+
+    async function updateDashboard() {
+      try {
+        const response = await fetch(SHEET_URL);
+        const data = await response.json();
+
+        if (!data || data.length === 0) return;
+
+        const latest = data[data.length - 1];
+
+        document.getElementById('temp').textContent = `${latest.temp} °C`;
+        document.getElementById('hum').textContent = `${latest.humidity} %`;
+        document.getElementById('co2').textContent = `${latest.CO2} ppm`;
+
+        setStatus('fan1', latest.fan1 || 'OFF');
+        setStatus('fan2', latest.fan2 || 'OFF');
+        setStatus('fan3', latest.fan3 || 'OFF');
+        setStatus('fan4', latest.fan4 || 'OFF');
+        setStatus('cooling', latest.cooling || 'OFF');
+        setStatus('water', latest.water || 'OFF');
+
+        const recent = data.slice(-20);
+
+        tempChart.data.labels = recent.map(row => row.Time || '');
+        tempChart.data.datasets[0].data = recent.map(row => parseFloat(row.temp));
+
+        humChart.data.labels = recent.map(row => row.Time || '');
+        humChart.data.datasets[0].data = recent.map(row => parseFloat(row.humidity));
+
+        co2Chart.data.labels = recent.map(row => row.Time || '');
+        co2Chart.data.datasets[0].data = recent.map(row => parseFloat(row.CO2));
+
+        tempChart.update();
+        humChart.update();
+        co2Chart.update();
+      } catch (error) {
+        console.error('Error loading Google Sheet data:', error);
+      }
+    }
+
+    updateDashboard();
+    setInterval(updateDashboard, 5000);
+  </script>
+</body>
+</html>
