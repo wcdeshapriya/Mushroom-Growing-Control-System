@@ -2,6 +2,8 @@
 
 ## Overview
 The Mushroom Growing Control System is an IoT-based solution designed to monitor and control environmental conditions required for healthy mushroom cultivation. The system helps maintain optimal temperature, humidity, and lighting levels automatically.
+## Site is live at
+https://wcdeshapriya.github.io/Mushroom-Growing-Control-System/
 
 ## Features
 - Real-time temperature and humidity monitoring
